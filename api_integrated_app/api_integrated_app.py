@@ -1,12 +1,18 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from api.api_utils import search_newsapi_articles, search_gnews_articles, search_factcheck, search_mediastack, search_newsdata_io, search_currents_api
 import streamlit as st
 import pickle
-import os
 import time
 
 # Load model
 model_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "model", "fake_news_model.pkl"))
-with open(model_path, "rb") as f:
-    model = pickle.load(f)
+try:
+    with open(model_path, "rb") as f:
+        model = pickle.load(f)
+except:
+    model = None  # Handle case where model doesn't exist
 
 st.set_page_config(page_title="\U0001F4F0 Fake News Detector", layout="centered", page_icon="\U0001F9E0")
 
@@ -121,6 +127,17 @@ st.markdown("""
         background: linear-gradient(135deg, #fadbd8, #f2d7d5);
         color: #a93226;
         border-left-color: #e74c3c;
+    }
+
+    .api-result-box {
+        border-radius: 12px;
+        padding: 20px 25px;
+        margin: 15px 0;
+        font-size: 18px;
+        font-weight: 600;
+        animation: fadeInUp 0.6s ease-out;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        border-left: 6px solid;
     }
 
     .reason-section {
@@ -252,7 +269,7 @@ st.markdown("""
     </h3>
 """, unsafe_allow_html=True)
 
-news_text = st.text_area(label="", height=150)
+news_text = st.text_area("✍️ Enter the news text you'd like to analyze:", height=150)
 
 # --- Analyze Button ---
 if st.button("\U0001F50D Analyze") and news_text.strip():
@@ -261,58 +278,391 @@ if st.button("\U0001F50D Analyze") and news_text.strip():
 
     st.markdown('<div class="section-header">🛠 Initial Text Pattern Checks Running...</div>', unsafe_allow_html=True)
 
+    # Basic pattern checks - Updated for better accuracy with real news
     checks = {
-        "Sensational phrasing": "suspicious" if any(word in news_text.lower() for word in ["shocking", "unbelievable", "terrifying"]) else "normal",
-        "Punctuation patterns": "suspicious" if "!!!" in news_text or "???" in news_text else "normal",
-        "Buzzwords": "suspicious" if any(word in news_text.lower() for word in ["hoax", "conspiracy", "cover-up"]) else "normal",
-        "Live article match": "suspicious",
-    }
-
-    verdict_score = 0
-    weight_map = {
-        "Sensational phrasing": 1,
-        "Punctuation patterns": 1,
-        "Buzzwords": 1,
-        "Live article match": 2,
+        "Sensational phrasing": "suspicious" if any(word in news_text.lower() for word in ["shocking", "unbelievable", "terrifying", "must see", "doctors hate this", "you won't believe"]) else "normal",
+        "Punctuation patterns": "suspicious" if "!!!" in news_text or "???" in news_text or news_text.count("!") > 5 else "normal",
+        "Buzzwords": "suspicious" if any(word in news_text.lower() for word in ["hoax", "conspiracy", "cover-up", "fake news", "mainstream media lies", "wake up sheeple"]) else "normal",
+        "ALL CAPS abuse": "suspicious" if sum(1 for word in news_text.split() if word.isupper() and len(word) > 3) > 3 else "normal"
     }
 
     for category, status in checks.items():
         with st.spinner(f"Analyzing {category}..."):
-            time.sleep(0.7)
-        weight = weight_map[category]
+            time.sleep(0.5)
         if status == "suspicious":
-            verdict_score += weight
             st.markdown(f'<div class="check-box check-suspicious">❗ <strong>{category}</strong> indicates unusual or fake-like patterns</div>', unsafe_allow_html=True)
         else:
             st.markdown(f'<div class="check-box check-normal">✅ <strong>{category}</strong> appears natural</div>', unsafe_allow_html=True)
 
     st.markdown("---")
+
+    # API Analysis Section
+    st.markdown('<div class="section-header">🔍 Cross-Verification with External APIs</div>', unsafe_allow_html=True)
+    
+    # Initialize API results for all 6 APIs
+    api_results = {
+        'newsapi': {'articles': [], 'status': 'checking'},
+        'gnews': {'articles': [], 'status': 'checking'},
+        'factcheck': {'claims': [], 'status': 'checking'},
+        'mediastack': {'articles': [], 'status': 'checking'},
+        'newsdata': {'articles': [], 'status': 'checking'},
+        'currents': {'articles': [], 'status': 'checking'}
+    }
+    
+    # Create placeholders for dynamic updates
+    newsapi_placeholder = st.empty()
+    gnews_placeholder = st.empty()
+    factcheck_placeholder = st.empty()
+    mediastack_placeholder = st.empty()
+    newsdata_placeholder = st.empty()
+    currents_placeholder = st.empty()
+    
+    # 1. NewsAPI Check
+    with st.spinner("🔍 Searching NewsAPI for matching articles..."):
+        newsapi_placeholder.markdown('<div class="api-result-box check-normal">📰 <strong>NewsAPI:</strong> Searching for matching articles...</div>', unsafe_allow_html=True)
+        time.sleep(1)
+        
+        newsapi_articles = search_newsapi_articles(news_text)
+        api_results['newsapi']['articles'] = newsapi_articles
+        
+        if newsapi_articles:
+            api_results['newsapi']['status'] = 'found'
+            newsapi_placeholder.markdown(f'<div class="api-result-box check-normal">📰 <strong>NewsAPI:</strong> Found {len(newsapi_articles)} matching articles ✅</div>', unsafe_allow_html=True)
+            
+            # Display top articles
+            for i, article in enumerate(newsapi_articles[:3], 1):
+                st.markdown(f"""
+                    <div style="background-color: #f8f9fa; padding: 15px 20px; margin-bottom: 10px; 
+                                border-radius: 8px; border-left: 4px solid #27ae60; 
+                                box-shadow: 0 4px 8px rgba(0,0,0,0.05);">
+                        <strong>#{i}: {article.get('title', 'No title')}</strong><br>
+                        <span style="font-size: 14px; color: #6c757d;">Source: {article.get('source', {}).get('name', 'Unknown')}</span><br>
+                        <a href="{article.get('url', '#')}" target="_blank" style="color: #2980b9; font-size: 14px;">Read article →</a>
+                    </div>
+                """, unsafe_allow_html=True)
+        else:
+            api_results['newsapi']['status'] = 'not_found'
+            newsapi_placeholder.markdown('<div class="api-result-box check-suspicious">📰 <strong>NewsAPI:</strong> No matching articles found ❌</div>', unsafe_allow_html=True)
+
+    # 2. GNews Check
+    with st.spinner("🔍 Searching GNews for matching articles..."):
+        gnews_placeholder.markdown('<div class="api-result-box check-normal">🌐 <strong>GNews:</strong> Searching for matching articles...</div>', unsafe_allow_html=True)
+        time.sleep(1)
+        
+        gnews_articles = search_gnews_articles(news_text)
+        api_results['gnews']['articles'] = gnews_articles
+        
+        if gnews_articles:
+            api_results['gnews']['status'] = 'found'
+            gnews_placeholder.markdown(f'<div class="api-result-box check-normal">🌐 <strong>GNews:</strong> Found {len(gnews_articles)} matching articles ✅</div>', unsafe_allow_html=True)
+            
+            # Display top articles
+            for i, article in enumerate(gnews_articles[:3], 1):
+                st.markdown(f"""
+                    <div style="background-color: #f8f9fa; padding: 15px 20px; margin-bottom: 10px; 
+                                border-radius: 8px; border-left: 4px solid #27ae60; 
+                                box-shadow: 0 4px 8px rgba(0,0,0,0.05);">
+                        <strong>#{i}: {article.get('title', 'No title')}</strong><br>
+                        <span style="font-size: 14px; color: #6c757d;">Source: {article.get('source', {}).get('name', 'Unknown')}</span><br>
+                        <a href="{article.get('url', '#')}" target="_blank" style="color: #2980b9; font-size: 14px;">Read article →</a>
+                    </div>
+                """, unsafe_allow_html=True)
+        else:
+            api_results['gnews']['status'] = 'not_found'
+            gnews_placeholder.markdown('<div class="api-result-box check-suspicious">🌐 <strong>GNews:</strong> No matching articles found ❌</div>', unsafe_allow_html=True)
+
+    # 3. Fact Check API
+    with st.spinner("🔍 Searching Google Fact Check for related claims..."):
+        factcheck_placeholder.markdown('<div class="api-result-box check-normal">🔍 <strong>Fact Check API:</strong> Searching for related claims...</div>', unsafe_allow_html=True)
+        time.sleep(1)
+        
+        factcheck_claims = search_factcheck(news_text)
+        api_results['factcheck']['claims'] = factcheck_claims
+        
+        if factcheck_claims:
+            api_results['factcheck']['status'] = 'found'
+            factcheck_placeholder.markdown(f'<div class="api-result-box check-normal">🔍 <strong>Fact Check API:</strong> Found {len(factcheck_claims)} related claims ✅</div>', unsafe_allow_html=True)
+            
+            # Display top claims
+            for i, claim in enumerate(factcheck_claims[:3], 1):
+                claim_text = claim.get('text', 'No claim text available')
+                claimant = claim.get('claimant', 'Unknown claimant')
+                reviews = claim.get('claimReview', [])
+                rating = reviews[0].get('textualRating', 'No rating') if reviews else 'No rating'
+                
+                st.markdown(f"""
+                    <div style="background-color: #fff3cd; padding: 15px 20px; margin-bottom: 10px; 
+                                border-radius: 8px; border-left: 4px solid #ffc107; 
+                                box-shadow: 0 4px 8px rgba(0,0,0,0.05);">
+                        <strong>#{i}: {claim_text[:100]}...</strong><br>
+                        <span style="font-size: 14px; color: #6c757d;">Claimant: {claimant}</span><br>
+                        <span style="font-size: 14px; color: #dc3545;">Rating: {rating}</span>
+                    </div>
+                """, unsafe_allow_html=True)
+        else:
+            api_results['factcheck']['status'] = 'not_found'
+            factcheck_placeholder.markdown('<div class="api-result-box check-normal">🔍 <strong>Fact Check API:</strong> No related claims found ✅</div>', unsafe_allow_html=True)
+
+    # 4. MediaStack API
+    with st.spinner("🔍 Searching MediaStack for matching articles..."):
+        mediastack_placeholder.markdown('<div class="api-result-box check-normal">📺 <strong>MediaStack:</strong> Searching for matching articles...</div>', unsafe_allow_html=True)
+        time.sleep(1)
+        
+        mediastack_articles = search_mediastack(news_text)
+        api_results['mediastack']['articles'] = mediastack_articles
+        
+        if mediastack_articles:
+            api_results['mediastack']['status'] = 'found'
+            mediastack_placeholder.markdown(f'<div class="api-result-box check-normal">📺 <strong>MediaStack:</strong> Found {len(mediastack_articles)} matching articles ✅</div>', unsafe_allow_html=True)
+            
+            # Display top articles
+            for i, article in enumerate(mediastack_articles[:3], 1):
+                st.markdown(f"""
+                    <div style="background-color: #f8f9fa; padding: 15px 20px; margin-bottom: 10px; 
+                                border-radius: 8px; border-left: 4px solid #27ae60; 
+                                box-shadow: 0 4px 8px rgba(0,0,0,0.05);">
+                        <strong>#{i}: {article.get('title', 'No title')}</strong><br>
+                        <span style="font-size: 14px; color: #6c757d;">Source: {article.get('source', 'Unknown')}</span><br>
+                        <a href="{article.get('url', '#')}" target="_blank" style="color: #2980b9; font-size: 14px;">Read article →</a>
+                    </div>
+                """, unsafe_allow_html=True)
+        else:
+            api_results['mediastack']['status'] = 'not_found'
+            mediastack_placeholder.markdown('<div class="api-result-box check-suspicious">📺 <strong>MediaStack:</strong> No matching articles found ❌</div>', unsafe_allow_html=True)
+
+    # 5. NewsData.io API
+    with st.spinner("🔍 Searching NewsData.io for matching articles..."):
+        newsdata_placeholder.markdown('<div class="api-result-box check-normal">📊 <strong>NewsData.io:</strong> Searching for matching articles...</div>', unsafe_allow_html=True)
+        time.sleep(1)
+        
+        newsdata_articles = search_newsdata_io(news_text)
+        api_results['newsdata']['articles'] = newsdata_articles
+        
+        if newsdata_articles:
+            api_results['newsdata']['status'] = 'found'
+            newsdata_placeholder.markdown(f'<div class="api-result-box check-normal">📊 <strong>NewsData.io:</strong> Found {len(newsdata_articles)} matching articles ✅</div>', unsafe_allow_html=True)
+            
+            # Display top articles
+            for i, article in enumerate(newsdata_articles[:3], 1):
+                st.markdown(f"""
+                    <div style="background-color: #f8f9fa; padding: 15px 20px; margin-bottom: 10px; 
+                                border-radius: 8px; border-left: 4px solid #27ae60; 
+                                box-shadow: 0 4px 8px rgba(0,0,0,0.05);">
+                        <strong>#{i}: {article.get('title', 'No title')}</strong><br>
+                        <span style="font-size: 14px; color: #6c757d;">Source: {article.get('source_id', 'Unknown')}</span><br>
+                        <a href="{article.get('link', '#')}" target="_blank" style="color: #2980b9; font-size: 14px;">Read article →</a>
+                    </div>
+                """, unsafe_allow_html=True)
+        else:
+            api_results['newsdata']['status'] = 'not_found'
+            newsdata_placeholder.markdown('<div class="api-result-box check-suspicious">📊 <strong>NewsData.io:</strong> No matching articles found ❌</div>', unsafe_allow_html=True)
+
+    # 6. Currents API
+    with st.spinner("🔍 Searching Currents API for matching articles..."):
+        currents_placeholder.markdown('<div class="api-result-box check-normal">⚡ <strong>Currents API:</strong> Searching for matching articles...</div>', unsafe_allow_html=True)
+        time.sleep(1)
+        
+        currents_articles = search_currents_api(news_text)
+        api_results['currents']['articles'] = currents_articles
+        
+        if currents_articles:
+            api_results['currents']['status'] = 'found'
+            currents_placeholder.markdown(f'<div class="api-result-box check-normal">⚡ <strong>Currents API:</strong> Found {len(currents_articles)} matching articles ✅</div>', unsafe_allow_html=True)
+            
+            # Display top articles
+            for i, article in enumerate(currents_articles[:3], 1):
+                st.markdown(f"""
+                    <div style="background-color: #f8f9fa; padding: 15px 20px; margin-bottom: 10px; 
+                                border-radius: 8px; border-left: 4px solid #27ae60; 
+                                box-shadow: 0 4px 8px rgba(0,0,0,0.05);">
+                        <strong>#{i}: {article.get('title', 'No title')}</strong><br>
+                        <span style="font-size: 14px; color: #6c757d;">Source: {article.get('author', 'Unknown')}</span><br>
+                        <a href="{article.get('url', '#')}" target="_blank" style="color: #2980b9; font-size: 14px;">Read article →</a>
+                    </div>
+                """, unsafe_allow_html=True)
+        else:
+            api_results['currents']['status'] = 'not_found'
+            currents_placeholder.markdown('<div class="api-result-box check-suspicious">⚡ <strong>Currents API:</strong> No matching articles found ❌</div>', unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # Calculate Final Verdict Based on All Checks - IMPROVED LOGIC WITH POSITIVE BIAS
     st.markdown('<div class="section-header">\U0001F4E2 Final Verdict</div>', unsafe_allow_html=True)
 
-    if verdict_score >= 3:
-        st.markdown('<div class="verdict-box verdict-fake">❌ Verdict: Possibly FAKE</div>', unsafe_allow_html=True)
-        st.markdown("""
-        <div class="reason-section">
-            <h4>Why we think this might be fake:</h4>
-            <ul>
-                <li>🚩 Contains emotionally manipulative or clickbait language</li>
-                <li>🔍 No matching credible sources were detected</li>
-                <li>🧠 Structure and phrasing don't align with real journalism</li>
-            </ul>
-        </div>
-        """, unsafe_allow_html=True)
+    # New improved scoring system with positive bias when APIs find results
+    credibility_score = 0
+    max_possible_score = 10
+    
+    # 1. Pattern Analysis (max 2 points deduction)
+    pattern_suspicious_count = sum(1 for status in checks.values() if status == "suspicious")
+    if pattern_suspicious_count == 0:
+        credibility_score += 2  # Good patterns
+    elif pattern_suspicious_count == 1:
+        credibility_score += 1  # Minor concern
+    # else: 0 points (multiple red flags)
+    
+    # 2. API Verification (max 8 points) - UPDATED FOR ALL 6 APIS
+    total_articles_found = 0
+    api_success_count = 0
+    news_apis = ['newsapi', 'gnews', 'mediastack', 'newsdata', 'currents']
+    
+    # Check all news APIs
+    for api_name in news_apis:
+        if api_results[api_name]['status'] == 'found':
+            articles_count = len(api_results[api_name]['articles'])
+            total_articles_found += articles_count
+            api_success_count += 1
+            
+            # Progressive scoring based on number of articles
+            if articles_count >= 5:
+                credibility_score += 1.5  # Strong verification per API
+            elif articles_count >= 2:
+                credibility_score += 1.2  # Moderate verification per API
+            else:
+                credibility_score += 0.8  # Weak verification per API
+    
+    # Fact-check results (can add or subtract points)
+    if api_results['factcheck']['status'] == 'found':
+        factcheck_claims = api_results['factcheck']['claims']
+        api_success_count += 0.5  # Count as half since it's different type
+        false_claims = 0
+        total_claims = len(factcheck_claims)
+        
+        for claim in factcheck_claims:
+            reviews = claim.get('claimReview', [])
+            if reviews:
+                rating = reviews[0].get('textualRating', '').lower()
+                if any(word in rating for word in ['false', 'fake', 'misleading', 'disputed', 'pants on fire']):
+                    false_claims += 1
+        
+        if false_claims > 0:
+            # Found disputed claims - deduct points but not too harshly
+            credibility_score -= 1.5
+        else:
+            # No disputed claims found - small bonus
+            credibility_score += 0.5
     else:
-        st.markdown('<div class="verdict-box verdict-real">✅ Verdict: Likely REAL</div>', unsafe_allow_html=True)
-        st.markdown("""
+        # No fact-check claims found - neutral to positive
+        credibility_score += 0.3
+    
+    # MAJOR POSITIVE BIAS: If ANY API finds articles, boost credibility significantly
+    if api_success_count >= 1:
+        credibility_score += 2  # Big bonus for any verification
+        
+        if api_success_count >= 2:
+            credibility_score += 1  # Extra bonus for cross-verification
+        
+        if api_success_count >= 3:
+            credibility_score += 0.5  # Additional bonus for multiple sources
+
+    # Ensure score is within bounds
+    credibility_score = max(0, min(max_possible_score, credibility_score))
+    
+    # Calculate percentage
+    credibility_percentage = (credibility_score / max_possible_score) * 100
+    
+    # Determine verdict based on score - UPDATED THRESHOLDS FOR MORE POSITIVE RESULTS
+    if credibility_percentage >= 55:  # Lowered from 70
+        verdict = "LIKELY REAL"
+        verdict_class = "verdict-real"
+        verdict_icon = "✅"
+    elif credibility_percentage >= 35:  # Lowered from 40
+        verdict = "POSSIBLY REAL"
+        verdict_class = "verdict-real"  # Changed to green instead of red
+        verdict_icon = "✅"
+    elif credibility_percentage >= 20:
+        verdict = "SUSPICIOUS"
+        verdict_class = "verdict-fake"
+        verdict_icon = "⚠️"
+    else:
+        verdict = "LIKELY FAKE"
+        verdict_class = "verdict-fake"
+        verdict_icon = "❌"
+
+    st.markdown(f'<div class="verdict-box {verdict_class}">{verdict_icon} Verdict: {verdict}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="text-align: center; font-size: 18px; color: white; margin: 20px 0;">Credibility Score: {credibility_score:.1f}/{max_possible_score} ({credibility_percentage:.1f}%)</div>', unsafe_allow_html=True)
+
+    # Detailed reasoning
+    if verdict == "LIKELY FAKE" or verdict == "SUSPICIOUS":
+        reasons = []
+        if pattern_suspicious_count >= 2:
+            reasons.append("🚩 Multiple suspicious text patterns detected")
+        if total_articles_found == 0:
+            reasons.append("🔍 No matching articles found in any credible news sources")
+        elif total_articles_found < 3:
+            reasons.append("📰 Limited verification from news sources")
+        if api_results['factcheck']['status'] == 'found':
+            false_claims = sum(1 for claim in api_results['factcheck']['claims'] 
+                             for review in claim.get('claimReview', [])
+                             if any(word in review.get('textualRating', '').lower() 
+                                   for word in ['false', 'fake', 'misleading', 'disputed']))
+            if false_claims > 0:
+                reasons.append(f"⚠️ {false_claims} disputed claims found in fact-checking databases")
+        if api_success_count == 0:
+            reasons.append("❌ No verification from any external sources")
+        
+        if not reasons:
+            reasons.append("🤔 Mixed signals from various verification checks")
+            
+        st.markdown(f"""
         <div class="reason-section">
-            <h4>Why this seems trustworthy:</h4>
+            <h4>Why this appears to be {verdict.lower()}:</h4>
             <ul>
-                <li>✅ Language and tone are consistent with professional writing</li>
-                <li>🌐 No strong red flags raised in pattern checks</li>
-                <li>🧾 Appears structurally sound like verified news articles</li>
+                {"".join(f"<li>{reason}</li>" for reason in reasons)}
             </ul>
         </div>
         """, unsafe_allow_html=True)
+    else:  # LIKELY REAL or POSSIBLY REAL
+        reasons = []
+        if pattern_suspicious_count == 0:
+            reasons.append("✅ Text patterns consistent with legitimate journalism")
+        if total_articles_found >= 10:
+            reasons.append(f"📰 Strong verification with {total_articles_found} matching articles from multiple credible sources")
+        elif total_articles_found >= 5:
+            reasons.append(f"🌐 Good verification with {total_articles_found} matching articles found")
+        elif total_articles_found >= 1:
+            reasons.append(f"📋 Found {total_articles_found} matching articles in credible news sources")
+        if api_success_count >= 3:
+            reasons.append("🔄 Cross-verified by multiple independent news APIs")
+        elif api_success_count >= 2:
+            reasons.append("✓ Verified by multiple news sources")
+        elif api_success_count >= 1:
+            reasons.append("✓ Confirmed by at least one credible news source")
+        if api_results['factcheck']['status'] == 'not_found':
+            reasons.append("🔍 No disputed claims found in fact-checking databases")
+        else:
+            # Check if fact-check claims are not disputed
+            false_claims = sum(1 for claim in api_results['factcheck']['claims'] 
+                             for review in claim.get('claimReview', [])
+                             if any(word in review.get('textualRating', '').lower() 
+                                   for word in ['false', 'fake', 'misleading', 'disputed']))
+            if false_claims == 0:
+                reasons.append("✅ Related claims in fact-check database show no disputes")
+            
+        st.markdown(f"""
+        <div class="reason-section">
+            <h4>Why this appears to be legitimate:</h4>
+            <ul>
+                {"".join(f"<li>{reason}</li>" for reason in reasons)}
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Debug info (you can remove this in production)
+    with st.expander("🔧 Debug Information"):
+        st.write(f"**Pattern Checks:** {checks}")
+        st.write(f"**API Results Status:**")
+        st.write(f"- NewsAPI: {api_results['newsapi']['status']} ({len(api_results['newsapi']['articles'])} articles)")
+        st.write(f"- GNews: {api_results['gnews']['status']} ({len(api_results['gnews']['articles'])} articles)")
+        st.write(f"- FactCheck: {api_results['factcheck']['status']} ({len(api_results['factcheck']['claims'])} claims)")
+        st.write(f"- MediaStack: {api_results['mediastack']['status']} ({len(api_results['mediastack']['articles'])} articles)")
+        st.write(f"- NewsData.io: {api_results['newsdata']['status']} ({len(api_results['newsdata']['articles'])} articles)")
+        st.write(f"- Currents API: {api_results['currents']['status']} ({len(api_results['currents']['articles'])} articles)")
+        st.write(f"**Scoring Details:**")
+        st.write(f"- Total articles found: {total_articles_found}")
+        st.write(f"- APIs with results: {api_success_count}")
+        st.write(f"- Credibility Score: {credibility_score:.1f}/{max_possible_score} ({credibility_percentage:.1f}%)")
+        st.write(f"- Pattern suspicious count: {pattern_suspicious_count}")
 
 else:
     st.markdown("""
