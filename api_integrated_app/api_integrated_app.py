@@ -260,7 +260,7 @@ st.markdown('<p class="subtitle">Trained on U.S. news data with live credibility
 st.markdown("""
     <h3 style="
         font-size: 30px;
-        margin-top: 10px;
+        margin-top: 11px;
         font-weight: 600;
         color: #ffffff;
         animation: fadeInUp 1s ease-in-out;
@@ -269,7 +269,7 @@ st.markdown("""
     </h3>
 """, unsafe_allow_html=True)
 
-news_text = st.text_area("✍️ Enter the news text you'd like to analyze:", height=150)
+news_text = st.text_area("", height=120)
 
 # --- Analyze Button ---
 if st.button("\U0001F50D Analyze") and news_text.strip():
@@ -401,7 +401,7 @@ if st.button("\U0001F50D Analyze") and news_text.strip():
                 """, unsafe_allow_html=True)
         else:
             api_results['factcheck']['status'] = 'not_found'
-            factcheck_placeholder.markdown('<div class="api-result-box check-normal">🔍 <strong>Fact Check API:</strong> No related claims found ✅</div>', unsafe_allow_html=True)
+            factcheck_placeholder.markdown('<div class="api-result-box check-suspicious">🔍 <strong>Fact Check API:</strong> No related claims found ❌</div>', unsafe_allow_html=True)
 
     # 4. MediaStack API
     with st.spinner("🔍 Searching MediaStack for matching articles..."):
