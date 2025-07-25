@@ -6,7 +6,7 @@ Follow these steps to launch the app on your machine.
 
 ```md
 📌 Before running the app, make sure to [setup your .env file](./env_setup.md)
-```
+
 ---
 
 ## 🔧 1. Setup Environment
