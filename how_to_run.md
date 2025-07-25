@@ -4,7 +4,7 @@ Follow these steps to launch the app on your machine.
 
 ---
 
-📌 Before running the app, make sure to [setup your .env file](./env_setup.md)
+## 📌 Before running the app, make sure to [setup your .env file](./env_setup.md)
 
 ---
 
