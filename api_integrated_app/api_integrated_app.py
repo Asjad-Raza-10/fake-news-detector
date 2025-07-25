@@ -140,6 +140,12 @@ st.markdown("""
         border-left: 6px solid;
     }
 
+    .api-error {
+        background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+        color: #856404;
+        border-left-color: #ffc107;
+    }
+
     .reason-section {
         background: rgba(255, 255, 255, 0.95);
         border-radius: 12px;
@@ -301,12 +307,12 @@ if st.button("\U0001F50D Analyze") and news_text.strip():
     
     # Initialize API results for all 6 APIs
     api_results = {
-        'newsapi': {'articles': [], 'status': 'checking'},
-        'gnews': {'articles': [], 'status': 'checking'},
-        'factcheck': {'claims': [], 'status': 'checking'},
-        'mediastack': {'articles': [], 'status': 'checking'},
-        'newsdata': {'articles': [], 'status': 'checking'},
-        'currents': {'articles': [], 'status': 'checking'}
+        'newsapi': {'articles': [], 'status': 'checking', 'error': None},
+        'gnews': {'articles': [], 'status': 'checking', 'error': None},
+        'factcheck': {'claims': [], 'status': 'checking', 'error': None},
+        'mediastack': {'articles': [], 'status': 'checking', 'error': None},
+        'newsdata': {'articles': [], 'status': 'checking', 'error': None},
+        'currents': {'articles': [], 'status': 'checking', 'error': None}
     }
     
     # Create placeholders for dynamic updates
@@ -322,15 +328,19 @@ if st.button("\U0001F50D Analyze") and news_text.strip():
         newsapi_placeholder.markdown('<div class="api-result-box check-normal">📰 <strong>NewsAPI:</strong> Searching for matching articles...</div>', unsafe_allow_html=True)
         time.sleep(1)
         
-        newsapi_articles = search_newsapi_articles(news_text)
-        api_results['newsapi']['articles'] = newsapi_articles
+        newsapi_result = search_newsapi_articles(news_text)
+        api_results['newsapi']['articles'] = newsapi_result.get('articles', [])
+        api_results['newsapi']['error'] = newsapi_result.get('error')
         
-        if newsapi_articles:
+        if newsapi_result.get('error'):
+            api_results['newsapi']['status'] = 'error'
+            newsapi_placeholder.markdown(f'<div class="api-result-box api-error">📰 <strong>NewsAPI:</strong> {newsapi_result["error"]} ⚠️</div>', unsafe_allow_html=True)
+        elif newsapi_result.get('articles'):
             api_results['newsapi']['status'] = 'found'
-            newsapi_placeholder.markdown(f'<div class="api-result-box check-normal">📰 <strong>NewsAPI:</strong> Found {len(newsapi_articles)} matching articles ✅</div>', unsafe_allow_html=True)
+            newsapi_placeholder.markdown(f'<div class="api-result-box check-normal">📰 <strong>NewsAPI:</strong> Found {len(newsapi_result["articles"])} matching articles ✅</div>', unsafe_allow_html=True)
             
             # Display top articles
-            for i, article in enumerate(newsapi_articles[:3], 1):
+            for i, article in enumerate(newsapi_result['articles'][:3], 1):
                 st.markdown(f"""
                     <div style="background-color: #f8f9fa; padding: 15px 20px; margin-bottom: 10px; 
                                 border-radius: 8px; border-left: 4px solid #27ae60; 
@@ -349,15 +359,19 @@ if st.button("\U0001F50D Analyze") and news_text.strip():
         gnews_placeholder.markdown('<div class="api-result-box check-normal">🌐 <strong>GNews:</strong> Searching for matching articles...</div>', unsafe_allow_html=True)
         time.sleep(1)
         
-        gnews_articles = search_gnews_articles(news_text)
-        api_results['gnews']['articles'] = gnews_articles
+        gnews_result = search_gnews_articles(news_text)
+        api_results['gnews']['articles'] = gnews_result.get('articles', [])
+        api_results['gnews']['error'] = gnews_result.get('error')
         
-        if gnews_articles:
+        if gnews_result.get('error'):
+            api_results['gnews']['status'] = 'error'
+            gnews_placeholder.markdown(f'<div class="api-result-box api-error">🌐 <strong>GNews:</strong> {gnews_result["error"]} ⚠️</div>', unsafe_allow_html=True)
+        elif gnews_result.get('articles'):
             api_results['gnews']['status'] = 'found'
-            gnews_placeholder.markdown(f'<div class="api-result-box check-normal">🌐 <strong>GNews:</strong> Found {len(gnews_articles)} matching articles ✅</div>', unsafe_allow_html=True)
+            gnews_placeholder.markdown(f'<div class="api-result-box check-normal">🌐 <strong>GNews:</strong> Found {len(gnews_result["articles"])} matching articles ✅</div>', unsafe_allow_html=True)
             
             # Display top articles
-            for i, article in enumerate(gnews_articles[:3], 1):
+            for i, article in enumerate(gnews_result['articles'][:3], 1):
                 st.markdown(f"""
                     <div style="background-color: #f8f9fa; padding: 15px 20px; margin-bottom: 10px; 
                                 border-radius: 8px; border-left: 4px solid #27ae60; 
@@ -376,15 +390,19 @@ if st.button("\U0001F50D Analyze") and news_text.strip():
         factcheck_placeholder.markdown('<div class="api-result-box check-normal">🔍 <strong>Fact Check API:</strong> Searching for related claims...</div>', unsafe_allow_html=True)
         time.sleep(1)
         
-        factcheck_claims = search_factcheck(news_text)
-        api_results['factcheck']['claims'] = factcheck_claims
+        factcheck_result = search_factcheck(news_text)
+        api_results['factcheck']['claims'] = factcheck_result.get('claims', [])
+        api_results['factcheck']['error'] = factcheck_result.get('error')
         
-        if factcheck_claims:
+        if factcheck_result.get('error'):
+            api_results['factcheck']['status'] = 'error'
+            factcheck_placeholder.markdown(f'<div class="api-result-box api-error">🔍 <strong>Fact Check API:</strong> {factcheck_result["error"]} ⚠️</div>', unsafe_allow_html=True)
+        elif factcheck_result.get('claims'):
             api_results['factcheck']['status'] = 'found'
-            factcheck_placeholder.markdown(f'<div class="api-result-box check-normal">🔍 <strong>Fact Check API:</strong> Found {len(factcheck_claims)} related claims ✅</div>', unsafe_allow_html=True)
+            factcheck_placeholder.markdown(f'<div class="api-result-box check-normal">🔍 <strong>Fact Check API:</strong> Found {len(factcheck_result["claims"])} related claims ✅</div>', unsafe_allow_html=True)
             
             # Display top claims
-            for i, claim in enumerate(factcheck_claims[:3], 1):
+            for i, claim in enumerate(factcheck_result['claims'][:3], 1):
                 claim_text = claim.get('text', 'No claim text available')
                 claimant = claim.get('claimant', 'Unknown claimant')
                 reviews = claim.get('claimReview', [])
@@ -408,15 +426,19 @@ if st.button("\U0001F50D Analyze") and news_text.strip():
         mediastack_placeholder.markdown('<div class="api-result-box check-normal">📺 <strong>MediaStack:</strong> Searching for matching articles...</div>', unsafe_allow_html=True)
         time.sleep(1)
         
-        mediastack_articles = search_mediastack(news_text)
-        api_results['mediastack']['articles'] = mediastack_articles
+        mediastack_result = search_mediastack(news_text)
+        api_results['mediastack']['articles'] = mediastack_result.get('articles', [])
+        api_results['mediastack']['error'] = mediastack_result.get('error')
         
-        if mediastack_articles:
+        if mediastack_result.get('error'):
+            api_results['mediastack']['status'] = 'error'
+            mediastack_placeholder.markdown(f'<div class="api-result-box api-error">📺 <strong>MediaStack:</strong> {mediastack_result["error"]} ⚠️</div>', unsafe_allow_html=True)
+        elif mediastack_result.get('articles'):
             api_results['mediastack']['status'] = 'found'
-            mediastack_placeholder.markdown(f'<div class="api-result-box check-normal">📺 <strong>MediaStack:</strong> Found {len(mediastack_articles)} matching articles ✅</div>', unsafe_allow_html=True)
+            mediastack_placeholder.markdown(f'<div class="api-result-box check-normal">📺 <strong>MediaStack:</strong> Found {len(mediastack_result["articles"])} matching articles ✅</div>', unsafe_allow_html=True)
             
             # Display top articles
-            for i, article in enumerate(mediastack_articles[:3], 1):
+            for i, article in enumerate(mediastack_result['articles'][:3], 1):
                 st.markdown(f"""
                     <div style="background-color: #f8f9fa; padding: 15px 20px; margin-bottom: 10px; 
                                 border-radius: 8px; border-left: 4px solid #27ae60; 
@@ -435,15 +457,19 @@ if st.button("\U0001F50D Analyze") and news_text.strip():
         newsdata_placeholder.markdown('<div class="api-result-box check-normal">📊 <strong>NewsData.io:</strong> Searching for matching articles...</div>', unsafe_allow_html=True)
         time.sleep(1)
         
-        newsdata_articles = search_newsdata_io(news_text)
-        api_results['newsdata']['articles'] = newsdata_articles
+        newsdata_result = search_newsdata_io(news_text)
+        api_results['newsdata']['articles'] = newsdata_result.get('articles', [])
+        api_results['newsdata']['error'] = newsdata_result.get('error')
         
-        if newsdata_articles:
+        if newsdata_result.get('error'):
+            api_results['newsdata']['status'] = 'error'
+            newsdata_placeholder.markdown(f'<div class="api-result-box api-error">📊 <strong>NewsData.io:</strong> {newsdata_result["error"]} ⚠️</div>', unsafe_allow_html=True)
+        elif newsdata_result.get('articles'):
             api_results['newsdata']['status'] = 'found'
-            newsdata_placeholder.markdown(f'<div class="api-result-box check-normal">📊 <strong>NewsData.io:</strong> Found {len(newsdata_articles)} matching articles ✅</div>', unsafe_allow_html=True)
+            newsdata_placeholder.markdown(f'<div class="api-result-box check-normal">📊 <strong>NewsData.io:</strong> Found {len(newsdata_result["articles"])} matching articles ✅</div>', unsafe_allow_html=True)
             
             # Display top articles
-            for i, article in enumerate(newsdata_articles[:3], 1):
+            for i, article in enumerate(newsdata_result['articles'][:3], 1):
                 st.markdown(f"""
                     <div style="background-color: #f8f9fa; padding: 15px 20px; margin-bottom: 10px; 
                                 border-radius: 8px; border-left: 4px solid #27ae60; 
@@ -462,15 +488,19 @@ if st.button("\U0001F50D Analyze") and news_text.strip():
         currents_placeholder.markdown('<div class="api-result-box check-normal">⚡ <strong>Currents API:</strong> Searching for matching articles...</div>', unsafe_allow_html=True)
         time.sleep(1)
         
-        currents_articles = search_currents_api(news_text)
-        api_results['currents']['articles'] = currents_articles
+        currents_result = search_currents_api(news_text)
+        api_results['currents']['articles'] = currents_result.get('articles', [])
+        api_results['currents']['error'] = currents_result.get('error')
         
-        if currents_articles:
+        if currents_result.get('error'):
+            api_results['currents']['status'] = 'error'
+            currents_placeholder.markdown(f'<div class="api-result-box api-error">⚡ <strong>Currents API:</strong> {currents_result["error"]} ⚠️</div>', unsafe_allow_html=True)
+        elif currents_result.get('articles'):
             api_results['currents']['status'] = 'found'
-            currents_placeholder.markdown(f'<div class="api-result-box check-normal">⚡ <strong>Currents API:</strong> Found {len(currents_articles)} matching articles ✅</div>', unsafe_allow_html=True)
+            currents_placeholder.markdown(f'<div class="api-result-box check-normal">⚡ <strong>Currents API:</strong> Found {len(currents_result["articles"])} matching articles ✅</div>', unsafe_allow_html=True)
             
             # Display top articles
-            for i, article in enumerate(currents_articles[:3], 1):
+            for i, article in enumerate(currents_result['articles'][:3], 1):
                 st.markdown(f"""
                     <div style="background-color: #f8f9fa; padding: 15px 20px; margin-bottom: 10px; 
                                 border-radius: 8px; border-left: 4px solid #27ae60; 
@@ -501,9 +531,10 @@ if st.button("\U0001F50D Analyze") and news_text.strip():
         credibility_score += 1  # Minor concern
     # else: 0 points (multiple red flags)
     
-    # 2. API Verification (max 8 points) - UPDATED FOR ALL 6 APIS
+    # 2. API Verification (max 8 points) - UPDATED FOR ALL 6 APIS WITH ERROR HANDLING
     total_articles_found = 0
     api_success_count = 0
+    api_error_count = 0
     news_apis = ['newsapi', 'gnews', 'mediastack', 'newsdata', 'currents']
     
     # Check all news APIs
@@ -520,6 +551,8 @@ if st.button("\U0001F50D Analyze") and news_text.strip():
                 credibility_score += 1.2  # Moderate verification per API
             else:
                 credibility_score += 0.8  # Weak verification per API
+        elif api_results[api_name]['status'] == 'error':
+            api_error_count += 1
     
     # Fact-check results (can add or subtract points)
     if api_results['factcheck']['status'] == 'found':
@@ -541,6 +574,8 @@ if st.button("\U0001F50D Analyze") and news_text.strip():
         else:
             # No disputed claims found - small bonus
             credibility_score += 0.5
+    elif api_results['factcheck']['status'] == 'error':
+        api_error_count += 0.5
     else:
         # No fact-check claims found - neutral to positive
         credibility_score += 0.3
@@ -554,6 +589,10 @@ if st.button("\U0001F50D Analyze") and news_text.strip():
         
         if api_success_count >= 3:
             credibility_score += 0.5  # Additional bonus for multiple sources
+
+    # Adjust scoring if many APIs had errors (don't penalize too much for API issues)
+    if api_error_count >= 3:
+        credibility_score += 1  # Small bonus since APIs being down doesn't mean news is fake
 
     # Ensure score is within bounds
     credibility_score = max(0, min(max_possible_score, credibility_score))
@@ -587,9 +626,9 @@ if st.button("\U0001F50D Analyze") and news_text.strip():
         reasons = []
         if pattern_suspicious_count >= 2:
             reasons.append("🚩 Multiple suspicious text patterns detected")
-        if total_articles_found == 0:
-            reasons.append("🔍 No matching articles found in any credible news sources")
-        elif total_articles_found < 3:
+        if total_articles_found == 0 and api_error_count < 3:
+            reasons.append("🔍 No matching articles found in credible news sources")
+        elif total_articles_found < 3 and api_error_count < 3:
             reasons.append("📰 Limited verification from news sources")
         if api_results['factcheck']['status'] == 'found':
             false_claims = sum(1 for claim in api_results['factcheck']['claims'] 
@@ -598,8 +637,10 @@ if st.button("\U0001F50D Analyze") and news_text.strip():
                                    for word in ['false', 'fake', 'misleading', 'disputed']))
             if false_claims > 0:
                 reasons.append(f"⚠️ {false_claims} disputed claims found in fact-checking databases")
-        if api_success_count == 0:
+        if api_success_count == 0 and api_error_count < 3:
             reasons.append("❌ No verification from any external sources")
+        if api_error_count >= 3:
+            reasons.append("⚠️ Multiple verification services were unavailable - results may be incomplete")
         
         if not reasons:
             reasons.append("🤔 Mixed signals from various verification checks")
@@ -630,7 +671,7 @@ if st.button("\U0001F50D Analyze") and news_text.strip():
             reasons.append("✓ Confirmed by at least one credible news source")
         if api_results['factcheck']['status'] == 'not_found':
             reasons.append("🔍 No disputed claims found in fact-checking databases")
-        else:
+        elif api_results['factcheck']['status'] == 'found':
             # Check if fact-check claims are not disputed
             false_claims = sum(1 for claim in api_results['factcheck']['claims'] 
                              for review in claim.get('claimReview', [])
@@ -638,6 +679,8 @@ if st.button("\U0001F50D Analyze") and news_text.strip():
                                    for word in ['false', 'fake', 'misleading', 'disputed']))
             if false_claims == 0:
                 reasons.append("✅ Related claims in fact-check database show no disputes")
+        if api_error_count >= 2:
+            reasons.append("ℹ️ Some verification services were unavailable, but available sources support authenticity")
             
         st.markdown(f"""
         <div class="reason-section">
@@ -652,15 +695,17 @@ if st.button("\U0001F50D Analyze") and news_text.strip():
     with st.expander("🔧 Debug Information"):
         st.write(f"**Pattern Checks:** {checks}")
         st.write(f"**API Results Status:**")
-        st.write(f"- NewsAPI: {api_results['newsapi']['status']} ({len(api_results['newsapi']['articles'])} articles)")
-        st.write(f"- GNews: {api_results['gnews']['status']} ({len(api_results['gnews']['articles'])} articles)")
-        st.write(f"- FactCheck: {api_results['factcheck']['status']} ({len(api_results['factcheck']['claims'])} claims)")
-        st.write(f"- MediaStack: {api_results['mediastack']['status']} ({len(api_results['mediastack']['articles'])} articles)")
-        st.write(f"- NewsData.io: {api_results['newsdata']['status']} ({len(api_results['newsdata']['articles'])} articles)")
-        st.write(f"- Currents API: {api_results['currents']['status']} ({len(api_results['currents']['articles'])} articles)")
+        for api_name in ['newsapi', 'gnews', 'factcheck', 'mediastack', 'newsdata', 'currents']:
+            if api_name == 'factcheck':
+                count = len(api_results[api_name]['claims'])
+                st.write(f"- {api_name.title()}: {api_results[api_name]['status']} ({count} claims) - Error: {api_results[api_name]['error']}")
+            else:
+                count = len(api_results[api_name]['articles'])
+                st.write(f"- {api_name.title()}: {api_results[api_name]['status']} ({count} articles) - Error: {api_results[api_name]['error']}")
         st.write(f"**Scoring Details:**")
         st.write(f"- Total articles found: {total_articles_found}")
         st.write(f"- APIs with results: {api_success_count}")
+        st.write(f"- APIs with errors: {api_error_count}")
         st.write(f"- Credibility Score: {credibility_score:.1f}/{max_possible_score} ({credibility_percentage:.1f}%)")
         st.write(f"- Pattern suspicious count: {pattern_suspicious_count}")
 
