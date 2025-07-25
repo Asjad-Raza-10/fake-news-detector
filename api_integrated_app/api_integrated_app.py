@@ -1,7 +1,7 @@
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from api.api_utils import search_newsapi_articles, search_gnews_articles, search_factcheck, search_mediastack, search_newsdata_io, search_currents_api
+from api.api_utils import search_newsapi_articles, search_gnews_articles, search_factcheck, search_mediastack, search_newsdata_io, search_currents_api, search_rapidapi_news
 import streamlit as st
 import pickle
 import time
@@ -305,14 +305,15 @@ if st.button("\U0001F50D Analyze") and news_text.strip():
     # API Analysis Section
     st.markdown('<div class="section-header">🔍 Cross-Verification with External APIs</div>', unsafe_allow_html=True)
     
-    # Initialize API results for all 6 APIs
+    # Initialize API results for all 7 APIs (including RapidAPI)
     api_results = {
         'newsapi': {'articles': [], 'status': 'checking', 'error': None},
         'gnews': {'articles': [], 'status': 'checking', 'error': None},
         'factcheck': {'claims': [], 'status': 'checking', 'error': None},
         'mediastack': {'articles': [], 'status': 'checking', 'error': None},
         'newsdata': {'articles': [], 'status': 'checking', 'error': None},
-        'currents': {'articles': [], 'status': 'checking', 'error': None}
+        'currents': {'articles': [], 'status': 'checking', 'error': None},
+        'rapidapi': {'articles': [], 'status': 'checking', 'error': None}
     }
     
     # Create placeholders for dynamic updates
@@ -322,6 +323,7 @@ if st.button("\U0001F50D Analyze") and news_text.strip():
     mediastack_placeholder = st.empty()
     newsdata_placeholder = st.empty()
     currents_placeholder = st.empty()
+    rapidapi_placeholder = st.empty()
     
     # 1. NewsAPI Check
     with st.spinner("🔍 Searching NewsAPI for matching articles..."):
@@ -514,6 +516,37 @@ if st.button("\U0001F50D Analyze") and news_text.strip():
             api_results['currents']['status'] = 'not_found'
             currents_placeholder.markdown('<div class="api-result-box check-suspicious">⚡ <strong>Currents API:</strong> No matching articles found ❌</div>', unsafe_allow_html=True)
 
+    # 7. RapidAPI News Check (NEW)
+    with st.spinner("🔍 Searching RapidAPI News for matching articles..."):
+        rapidapi_placeholder.markdown('<div class="api-result-box check-normal">🚀 <strong>RapidAPI News:</strong> Searching for matching articles...</div>', unsafe_allow_html=True)
+        time.sleep(1)
+        
+        rapidapi_result = search_rapidapi_news(news_text)
+        api_results['rapidapi']['articles'] = rapidapi_result.get('articles', [])
+        api_results['rapidapi']['error'] = rapidapi_result.get('error')
+        
+        if rapidapi_result.get('error'):
+            api_results['rapidapi']['status'] = 'error'
+            rapidapi_placeholder.markdown(f'<div class="api-result-box api-error">🚀 <strong>RapidAPI News:</strong> {rapidapi_result["error"]} ⚠️</div>', unsafe_allow_html=True)
+        elif rapidapi_result.get('articles'):
+            api_results['rapidapi']['status'] = 'found'
+            rapidapi_placeholder.markdown(f'<div class="api-result-box check-normal">🚀 <strong>RapidAPI News:</strong> Found {len(rapidapi_result["articles"])} matching articles ✅</div>', unsafe_allow_html=True)
+            
+            # Display top articles
+            for i, article in enumerate(rapidapi_result['articles'][:3], 1):
+                st.markdown(f"""
+                    <div style="background-color: #f8f9fa; padding: 15px 20px; margin-bottom: 10px; 
+                                border-radius: 8px; border-left: 4px solid #27ae60; 
+                                box-shadow: 0 4px 8px rgba(0,0,0,0.05);">
+                        <strong>#{i}: {article.get('title', 'No title')}</strong><br>
+                        <span style="font-size: 14px; color: #6c757d;">Source: {article.get('source', {}).get('name', 'Unknown')}</span><br>
+                        <a href="{article.get('url', '#')}" target="_blank" style="color: #2980b9; font-size: 14px;">Read article →</a>
+                    </div>
+                """, unsafe_allow_html=True)
+        else:
+            api_results['rapidapi']['status'] = 'not_found'
+            rapidapi_placeholder.markdown('<div class="api-result-box check-suspicious">🚀 <strong>RapidAPI News:</strong> No matching articles found ❌</div>', unsafe_allow_html=True)
+
     st.markdown("---")
 
     # Calculate Final Verdict Based on All Checks - IMPROVED LOGIC WITH POSITIVE BIAS
@@ -531,11 +564,11 @@ if st.button("\U0001F50D Analyze") and news_text.strip():
         credibility_score += 1  # Minor concern
     # else: 0 points (multiple red flags)
     
-    # 2. API Verification (max 8 points) - UPDATED FOR ALL 6 APIS WITH ERROR HANDLING
+    # 2. API Verification (max 8 points) - UPDATED FOR ALL 7 APIS WITH ERROR HANDLING
     total_articles_found = 0
     api_success_count = 0
     api_error_count = 0
-    news_apis = ['newsapi', 'gnews', 'mediastack', 'newsdata', 'currents']
+    news_apis = ['newsapi', 'gnews', 'mediastack', 'newsdata', 'currents', 'rapidapi']
     
     # Check all news APIs
     for api_name in news_apis:
@@ -695,7 +728,7 @@ if st.button("\U0001F50D Analyze") and news_text.strip():
     with st.expander("🔧 Debug Information"):
         st.write(f"**Pattern Checks:** {checks}")
         st.write(f"**API Results Status:**")
-        for api_name in ['newsapi', 'gnews', 'factcheck', 'mediastack', 'newsdata', 'currents']:
+        for api_name in ['newsapi', 'gnews', 'factcheck', 'mediastack', 'newsdata', 'currents', 'rapidapi']:
             if api_name == 'factcheck':
                 count = len(api_results[api_name]['claims'])
                 st.write(f"- {api_name.title()}: {api_results[api_name]['status']} ({count} claims) - Error: {api_results[api_name]['error']}")

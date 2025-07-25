@@ -4,6 +4,7 @@ import os
 from dotenv import load_dotenv
 import urllib.parse
 import re
+import time
 
 load_dotenv()
 
@@ -13,6 +14,7 @@ FACTCHECK_KEY = os.getenv("FACTCHECK_KEY")
 MEDIASTACK_KEY = os.getenv("MEDIASTACK_KEY")
 NEWSDATA_KEY = os.getenv("NEWSDATA_KEY")
 CURRENTS_KEY = os.getenv("CURRENTS_KEY")
+RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY")
 
 def extract_keywords(text, max_words=8):
     """Extract key terms from the news text for better API search"""
@@ -308,20 +310,34 @@ def search_newsdata_io(query):
     return {"error": None, "articles": []}
 
 def search_currents_api(query):
-    """Search Currents API (Free tier: 600 requests/month)"""
+    """Search Currents API with strict 6-second TOTAL timeout (Free tier: 600 requests/month)"""
     if not CURRENTS_KEY:
         return {"error": "API key not configured", "articles": []}
     
-    # Try multiple search strategies
+    # Start timing for TOTAL 6-second limit
+    start_time = time.time()
+    
+    # Try multiple search strategies but with strict time limit
     search_queries = [
         query.strip(),  # Original query first
         extract_keywords(query, 6),  # Then keywords
         extract_keywords(query, 3)   # Fallback with fewer keywords
     ]
     
-    for search_query in search_queries:
+    for i, search_query in enumerate(search_queries):
+        # Check if we've exceeded 6 seconds total
+        elapsed_time = time.time() - start_time
+        if elapsed_time >= 6:
+            return {"error": "Request timed out - API took too long (6s limit)", "articles": []}
+        
         if not search_query:
             continue
+        
+        # Calculate remaining time for this request (minimum 1 second)
+        remaining_time = max(1, 6 - elapsed_time)
+        # For later queries, use even shorter timeout to stay within limit
+        if i > 0:
+            remaining_time = min(remaining_time, 2)
             
         url = "https://api.currentsapi.services/v1/search"
         params = {
@@ -331,9 +347,9 @@ def search_currents_api(query):
         }
         
         try:
-            response = requests.get(url, params=params, timeout=6)
+            response = requests.get(url, params=params, timeout=remaining_time)
             print(f"Currents Status Code: {response.status_code}")
-            print(f"Currents Search Query: '{search_query}'")
+            print(f"Currents Search Query: '{search_query}' (timeout: {remaining_time}s)")
             
             if response.status_code == 200:
                 data = response.json()
@@ -348,11 +364,103 @@ def search_currents_api(query):
             else:
                 print(f"Currents Error: {response.status_code} - {response.text}")
         except requests.exceptions.Timeout:
-            return {"error": "Request timed out - API may be slow", "articles": []}
+            print(f"Currents timeout after {remaining_time}s with query '{search_query}'")
+            # Continue to next query if we still have time
+            if time.time() - start_time < 5.5:  # Leave some buffer
+                continue
+            else:
+                return {"error": "Request timed out - API took too long (6s limit)", "articles": []}
         except requests.exceptions.ConnectionError:
             return {"error": "Connection failed - API may be down", "articles": []}
         except Exception as e:
             print(f"Currents Exception with query '{search_query}': {e}")
             continue
+        
+        # Final time check after successful request
+        if time.time() - start_time >= 6:
+            return {"error": "Request timed out - API took too long (6s limit)", "articles": []}
+    
+    return {"error": None, "articles": []}
+
+def search_rapidapi_news(query):
+    """Search RapidAPI News with strict 6-second TOTAL timeout"""
+    if not RAPIDAPI_KEY:
+        return {"error": "API key not configured", "articles": []}
+    
+    # Start timing for TOTAL 6-second limit
+    start_time = time.time()
+    
+    # Try multiple search strategies but with strict time limit
+    search_queries = [
+        query.strip(),  # Original query first
+        extract_keywords(query, 6),  # Then keywords
+        extract_keywords(query, 3)   # Fallback with fewer keywords
+    ]
+    
+    for i, search_query in enumerate(search_queries):
+        # Check if we've exceeded 6 seconds total
+        elapsed_time = time.time() - start_time
+        if elapsed_time >= 6:
+            return {"error": "Request timed out - API took too long (6s limit)", "articles": []}
+        
+        if not search_query:
+            continue
+        
+        # Calculate remaining time for this request (minimum 1 second)
+        remaining_time = max(1, 6 - elapsed_time)
+        # For later queries, use even shorter timeout to stay within limit
+        if i > 0:
+            remaining_time = min(remaining_time, 2)
+            
+        # Using a popular news API endpoint from RapidAPI
+        url = "https://newsapi-v2.p.rapidapi.com/everything"
+        
+        headers = {
+            "X-RapidAPI-Key": RAPIDAPI_KEY,
+            "X-RapidAPI-Host": "newsapi-v2.p.rapidapi.com"
+        }
+        
+        params = {
+            "q": search_query,
+            "language": "en",
+            "sortBy": "relevancy",
+            "pageSize": 15
+        }
+        
+        try:
+            response = requests.get(url, headers=headers, params=params, timeout=remaining_time)
+            print(f"RapidAPI Status Code: {response.status_code}")
+            print(f"RapidAPI Search Query: '{search_query}' (timeout: {remaining_time}s)")
+            
+            if response.status_code == 200:
+                data = response.json()
+                articles = data.get("articles", [])
+                print(f"RapidAPI found {len(articles)} articles with query: '{search_query}'")
+                if articles:  # Return first successful result
+                    return {"error": None, "articles": articles}
+            elif response.status_code == 429:
+                return {"error": "Rate limit exceeded - quota exhausted", "articles": []}
+            elif response.status_code == 401:
+                return {"error": "Invalid API key", "articles": []}
+            elif response.status_code == 403:
+                return {"error": "Access forbidden - check subscription", "articles": []}
+            else:
+                print(f"RapidAPI Error: {response.status_code} - {response.text}")
+        except requests.exceptions.Timeout:
+            print(f"RapidAPI timeout after {remaining_time}s with query '{search_query}'")
+            # Continue to next query if we still have time
+            if time.time() - start_time < 5.5:  # Leave some buffer
+                continue
+            else:
+                return {"error": "Request timed out - API took too long (6s limit)", "articles": []}
+        except requests.exceptions.ConnectionError:
+            return {"error": "Connection failed - API may be down", "articles": []}
+        except Exception as e:
+            print(f"RapidAPI Exception with query '{search_query}': {e}")
+            continue
+        
+        # Final time check after successful request
+        if time.time() - start_time >= 6:
+            return {"error": "Request timed out - API took too long (6s limit)", "articles": []}
     
     return {"error": None, "articles": []}
