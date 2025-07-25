@@ -269,7 +269,7 @@ st.markdown("""
     </h3>
 """, unsafe_allow_html=True)
 
-news_text = st.text_area("", height=120)
+news_text = st.text_area("Enter News Text:", height=120, label_visibility="collapsed")
 
 # --- Analyze Button ---
 if st.button("\U0001F50D Analyze") and news_text.strip():
