@@ -1,111 +1,77 @@
-# 🧠 Fake News Detector 📰  
-A smart, multi-layered fake news detection system powered by Machine Learning and contextual API validation.
+# 🧠 Fake News Detector 📰
 
-## 🚀 Overview  
-This project tackles one of the biggest digital challenges of our era: **detecting fake news**. Traditional machine learning models, no matter how accurate, struggle with context and authenticity — two things vital to validate news in the real world.
-
-That’s why this system goes beyond model predictions by combining them with **six powerful APIs** that cross-verify content validity in real time.
+A smart, AI-powered app that verifies the authenticity of news using a custom-trained model combined with six real-world verification APIs. Built to tackle the challenge of misleading news by analyzing both linguistic patterns and contextual credibility.
 
 ---
 
-## 🎯 Intuition & Problem Statement  
-While ML models can be trained to classify news as "real" or "fake" based on language patterns, such predictions often fall short due to:
-- Lack of **real-time verification**
-- Inability to understand **context** (e.g., satire vs. misinformation)
-- Varying **writing styles** and **sources**
+## 🌟 Project Intuition & Motivation
 
-To overcome this, I built a **hybrid approach** that:
-1. Predicts the nature of news using a trained logistic regression model.
-2. **Validates the content through real-world news and fact-check APIs.**
+Fake news isn't just misleading — it’s dangerous. Traditional ML models can classify text as fake or real, but news articles need **context**, **language analysis**, and **external fact-checking** to make an accurate judgment.
+
+That’s why I went beyond just model training and built an integrated system that combines machine learning with **6 powerful APIs** for real-time credibility analysis.
 
 ---
 
-## 🧠 Machine Learning Model  
+## 🚀 Approach & Architecture
 
-- **Algorithm**: Logistic Regression  
-- **Dataset**: [Fake and Real News Dataset (Kaggle)](https://www.kaggle.com/clmentbisaillon/fake-and-real-news-dataset)  
-- **Size**: Over 50,000 labeled news articles  
-- **Training Platform**: Google Colab  
-- **Accuracy**: ~98% on validation set
+1. **Custom ML Model**
+   - Trained on over **50,000+ labeled news articles**
+   - Built using **logistic regression**, with preprocessing via NLTK and Scikit-learn
+   - Achieved **high accuracy (~98%)** on test data
 
----
+2. **Layered Validation System**
+   - The app first checks the **language and structural patterns** using the ML model.
+   - Then, it verifies the **authenticity** of the content by querying **6 fact-checking & credibility APIs**:
+     - **Google Fact Check API**
+     - **GNews API**
+     - **NewsData.io API**
+     - **NewsAPI.org**
+     - **Bing News Search API**
+     - **OpenAI GPT API** (contextual re-checks)
 
-## 🔗 Real-Time API Integration  
-
-Since the model can't fully capture **news context, credibility of the source**, or **timeliness**, I incorporated **6 external APIs** to boost decision-making accuracy:
-
-1. **Google Fact Check API**  
-2. **GNews API**  
-3. **NewsAPI.org**  
-4. **OpenAI GPT API**  
-5. **TextRazor API**  
-6. **Aylien News API**  
-
-These help:
-- Verify if the news exists on reputable platforms
-- Fetch similar news from reliable outlets
-- Perform real-time fact checking
-- Detect language, topics, and sentiment
+3. **Streamlit Web App**
+   - Clean, modern UI with real-time feedback
+   - Dynamically styled feedback boxes (green/red)
+   - Context-aware intermediate responses
+   - Justified final verdict with AI-generated reasoning
 
 ---
 
-## 💻 Web App  
+## 🛠️ Tech Stack
 
-- **Framework**: [Streamlit](https://streamlit.io)  
-- **Frontend Styling**:  
-  - Custom CSS via `st.markdown`  
-  - Status indicators with colored boxes (red for fake, green for real)  
-  - Dynamic intermediate feedback while analyzing  
-- **Backend**:
-  - Python-based logic combining model + API calls  
-  - Shell script (`run_app.sh`) for local deployment
-
-### ✨ UI Highlights:
-- Smooth animations for loading and transitions  
-- Justification messages based on both model and API findings  
-- Input box repositioned for better user experience
-
----
-
-## 🧪 Testing & Evaluation  
-- Ongoing manual testing on **breaking news from various sources**
-- Evaluating **API effectiveness + model synergy**
-- Planning to publish detailed accuracy benchmarks soon
-
----
-
-## 📦 Tech Stack
-
-- **Python** (Scikit-learn, Pandas, Requests)
-- **Streamlit** (for UI)
+- **Python** (NLTK, Scikit-learn, Pandas, Requests)
+- **Streamlit** (for web app UI)
+- **APIs** (for cross-verification)
 - **Google Colab** (model training)
 - **Git + GitHub** (version control)
-- **APIs** (OpenAI, GNews, etc.)
-- **dotenv** (for managing API keys)
+- **Mac/Linux & Windows support** (via `.sh` and `.bat` scripts)
+
 
 ---
 
-## 🎯 Future Enhancements
+## 📊 Dataset Info
 
-- Add **user login** and **prediction history**
-- Support for **multiple languages**
-- Integration with **browser extensions** for instant fact-check
-- Deploy to **Streamlit Cloud / Hugging Face Spaces**
-
----
-
-## 🙌 Credits
-
-- Dataset from Kaggle  
-- APIs by OpenAI, Google, GNews, TextRazor, and Aylien  
-- Logo/icon inspirations from [Flaticon](https://www.flaticon.com/)
+- Source: Kaggle “Fake and Real News Dataset”
+- Data: ~50,000 articles
+- Labels: Real vs. Fake
+- Focus: Primarily political news (US-based)
+- Preprocessing: Tokenization, stopword removal, TF-IDF
 
 ---
 
-## 🤝 Let's Connect!
+## 🔐 Why Use APIs?
 
-If you’re passionate about AI, ML, or tackling misinformation — feel free to reach out or fork the repo. Let’s build smart, responsible tech together! 🚀
+> “ML models learn language — not truth.”
+
+Since fake news often includes real words with fake contexts, my app integrates **external APIs** to cross-check if the content is verified or disputed elsewhere.
+
+This multi-layered pipeline ensures more **realistic and trustworthy** results.
 
 ---
 
-**Built with 💡 by Asjad Raza**
+## 📈 Future Improvements
+
+- Auto-news summarization
+- Language translation for Urdu & Hindi support
+- Real-time news stream monitoring
+- Deeper sentiment & emotion detection
