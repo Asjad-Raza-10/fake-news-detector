@@ -22,12 +22,13 @@ That’s why I went beyond just model training and built an integrated system th
 2. **Layered Validation System**
    - The app first checks the **language and structural patterns** using the ML model.
    - Then, it verifies the **authenticity** of the content by querying **6 fact-checking & credibility APIs**:
-     - **Google Fact Check API**
-     - **GNews API**
-     - **NewsData.io API**
-     - **NewsAPI.org**
-     - **Bing News Search API**
-     - **OpenAI GPT API** (contextual re-checks)
+      - **NewsAPI**
+      - **GNews API**
+      - **Google Fact Check Tools API**
+      - **MediaStack API**
+      - **NewsData.io API**
+      - **Currents API**
+
 
 3. **Streamlit Web App**
    - Clean, modern UI with real-time feedback
