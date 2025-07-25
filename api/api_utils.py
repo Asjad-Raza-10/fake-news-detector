@@ -331,7 +331,7 @@ def search_currents_api(query):
         }
         
         try:
-            response = requests.get(url, params=params, timeout=25)
+            response = requests.get(url, params=params, timeout=6)
             print(f"Currents Status Code: {response.status_code}")
             print(f"Currents Search Query: '{search_query}'")
             
