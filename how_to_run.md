@@ -12,6 +12,7 @@ Then, install dependencies:
 
 ```bash
 pip install -r requirements.txt
+```
 
 ---
 
@@ -22,6 +23,7 @@ Run the app using the provided shell script:
 ```bash
 cd fake-news-detector
 ./run_macos.sh
+```
 
 ---
 
@@ -33,6 +35,7 @@ Simply double-click the file:
 
 ```bash
 run_windows.bat
+```
 
 # Option B: Manual method
 
@@ -41,5 +44,6 @@ Open terminal and run:
 ```bash
 cd fake-news-detector
 streamlit run app.py
+```
 
 ---
