@@ -29,7 +29,7 @@ cd fake-news-detector
 
 ## 🪟 3. Run on Windows
 
-# Option A: Double-click method
+### Option A: Double-click method
 
 Simply double-click the file:
 
@@ -37,7 +37,7 @@ Simply double-click the file:
 run_windows.bat
 ```
 
-# Option B: Manual method
+### Option B: Manual method
 
 Open terminal and run:
 
